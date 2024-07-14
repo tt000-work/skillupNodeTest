@@ -27,7 +27,7 @@ app.use(routes);
 //start http server
 const httpServer = http.createServer(app);
 httpServer.listen(port);
-console.log(`[${serviceName}] http server listening at port ${port}`);
+console.log(`[${serviceName}] http server listening at  http://localhost:${port}`);
 
 //start https server
 if(isHttps) {

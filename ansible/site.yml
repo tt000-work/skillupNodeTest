@@ -1,0 +1,10 @@
+- hosts: all
+  tasks:
+    - name: Install dependencies
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - openjdk-11-jdk
+        - maven
+        - nodejs
