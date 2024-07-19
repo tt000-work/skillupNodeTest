@@ -13,7 +13,7 @@
         pull: true
         state: started
         ports:
-          - 81:8181
+          - 81:8000
 
 
 ##TODO:Make Changes in port according to Node.js App Port
