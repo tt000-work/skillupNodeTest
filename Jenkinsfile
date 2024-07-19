@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     environment {
+        LANG = 'en_US.UTF-8'
+        LC_ALL = 'en_US.UTF-8'
         ANSIBLE_INVENTORY = 'ips-inventory.ini'
         DOCKER_IMAGE = 'node.js-test-app'
     }
