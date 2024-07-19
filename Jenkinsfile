@@ -68,7 +68,7 @@ pipeline {
                     environments.each { environ ->
                         stage("Build and Deploy to ${environ} environment") {
                             // Use SSH credentials
-                            withCredentials([usernamePassword(credentialsId: 'sshCreds', passwordVariable: 'sshPass', usernameVariable: 'sshUser')]) {
+                            withCredentials([usernamePassword(credentialsId: 'ssh', passwordVariable: 'sshPass', usernameVariable: 'sshUser')]) {
                                 // Display the inventory file
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
@@ -79,7 +79,7 @@ pipeline {
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", '-f Dockerfile .')
 
                                 // Push Docker image to Docker registry
-                                withCredentials([usernamePassword(credentialsId: 'DockerHubCreds', passwordVariable: 'dockerPass', usernameVariable: 'dockerUser')]) {
+                                withCredentials([usernamePassword(credentialsId: 'dockerCreds', passwordVariable: 'dockerPass', usernameVariable: 'dockerUser')]) {
                                     // Login to Docker registry
                                     sh "docker login -u ${dockerUser} -p ${dockerPass}"
 
@@ -97,7 +97,7 @@ pipeline {
                                         extraVars: [
                                             docker_image: imageTag
                                         ],
-                                        credentialsId: 'sshCreds'
+                                        credentialsId: 'ssh'
                                     )
 
                                     // Verify deployment
