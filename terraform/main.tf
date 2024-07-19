@@ -15,7 +15,7 @@ variable "host_ports" {
 resource "docker_container" "container" {  
   count  = length(var.container_names)  
   name   = var.container_names[count.index]  
-  image  = "ubuntu:latest"  
+  image  = "tt000/remote-server1:latest"  
   command = ["sleep", "infinity"]
 
   ports {  
