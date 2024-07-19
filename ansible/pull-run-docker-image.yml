@@ -1,0 +1,16 @@
+# ansible/run_docker_container.yml
+- hosts: all
+  become: true
+
+  vars:
+    docker_image: test
+
+  tasks:
+    - name: Run Docker container
+      docker_container:
+        name: "my-container"
+        image: "{{ docker_image }}"
+        pull: true
+        state: started
+        ports:
+          - 81:8181

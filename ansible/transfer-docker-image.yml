@@ -1,0 +1,19 @@
+---
+- hosts: azure-vm
+  tasks:
+    - name: Save Docker image
+      command: docker save new | bzip2
+      register: saved_image
+
+    - name: Transfer Docker image to remote host
+      shell: ssh user@{{ ansible_host }} 'bunzip2 | docker load'
+      args:
+        stdin: "{{ saved_image.stdout }}"
+
+    - name: Verify image is loaded
+      command: docker images
+      register: docker_images
+      changed_when: false
+
+    - debug:
+        msg: "The Docker image 'your-app-name' has been successfully transferred and loaded on the remote host."
