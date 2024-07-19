@@ -1,14 +1,14 @@
 # dev-playbook.yml
-- hosts: all
-  become: yes
-  tasks:
-    - name: Install Node.js
-      apt:
-        update_cache: yes
-        name: nodejs
-        state: present
+- hosts: all  
+  become: yes  
+  tasks:  
+    - name: Install npm  
+      apt:  
+        update_cache: yes  
+        name: npm  
+        state: present  
 
-    - name: Install Nginx
-      apt:
-        name: nginx
+    - name: Install Node.js  
+      apt:  
+        name: nodejs  
         state: present

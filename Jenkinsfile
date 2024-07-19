@@ -2,9 +2,8 @@ pipeline {
     agent any  
 
     environment {  
-        ANSIBLE_INVENTORY = 'inventory.ini'  
-        DOCKER_IMAGE = 'mynodejs-app'  
-        ANSIBLE_HOST_KEY_CHECKING = 'False'  
+        ANSIBLE_INVENTORY = 'ips-inventory.ini'  
+        DOCKER_IMAGE = 'node.js-test-app'  
     }  
 
     stages {  
@@ -28,7 +27,7 @@ pipeline {
                     for (environ in environments) {  
                         stage("Provisioning ${environ} environment") {  
                             def containerName = "${environ}_container"  
-                            def containerImage = 'ubuntu:latest'  
+                            def containerImage = 'ubuntu:latest'  //TODO:Add Name of your custom image
 
                             // Run a new Docker container  
                             sh "docker run -d --name ${containerName} ${containerImage} sleep infinity"  
@@ -50,6 +49,15 @@ pipeline {
             }  
         }  
 
+        stage('Build Node.js App') {  
+            steps {  
+                script {  
+                    sh 'npm install'  
+                    sh 'npm start'  
+                }  
+            }  
+        }  
+
         stage('Build and Deploy') {  
             steps {  
                 script {  
@@ -65,7 +73,7 @@ pipeline {
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"  
 
                                 // Install Docker on the remote servers using Ansible  
-                                sh "ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/install-docker.yml"  
+                                sh "ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml"  
 
                                 // Build Docker image for the current environment  
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", "-f Dockerfile .")  
@@ -84,13 +92,19 @@ pipeline {
 
                                     // Deploy the Docker image using Ansible  
                                     ansiblePlaybook(  
-                                        playbook: "ansible/pull-run-docker-image.yml",  
+                                        playbook: "ansible/run-dockerImage.yml",  
                                         inventory: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}",  
                                         extraVars: [  
                                             docker_image: imageTag  
                                         ],  
                                         credentialsId: 'sshCreds'  
                                     )  
+
+                                    // Verify deployment  
+                                    def deployStatus = sh(script: "ansible -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} -m shell -a 'docker ps | grep ${DOCKER_IMAGE}:${environ}'", returnStatus: true)  
+                                    if (deployStatus != 0) {  
+                                        error "Deployment to ${environ} environment failed"  
+                                    }  
                                 }  
                             }  
                         }  
@@ -99,4 +113,4 @@ pipeline {
             }  
         }  
     }  
-}  
+}
