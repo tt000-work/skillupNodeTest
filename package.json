@@ -4,6 +4,7 @@
   "description": "Zowe sample node API",
   "main": "app.js",
   "scripts": {
+    "stop": "pkill -f 'node src/app.js'",
     "dev": "nodemon src/app.js",
     "dev:https": "nodemon src/app.js --key sslcert/server.key --cert sslcert/server.cert",
     "start": "node src/app.js"

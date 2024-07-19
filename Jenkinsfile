@@ -10,12 +10,51 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 sh '''
+                    # Update the package list
                     sudo apt-get update
-                    sudo apt-get install -y gnupg software-properties-common curl sshpass
-                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-                    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-                    sudo apt-get install -y nodejs npm ansible docker-ce
-                    sudo systemctl start docker
+
+                    # Check if gnupg is installed, if not, install it
+                    if ! dpkg -l | grep -q gnupg; then
+                        sudo apt-get install -y gnupg
+                    fi
+
+                    # Check if software-properties-common is installed, if not, install it
+                    if ! dpkg -l | grep -q software-properties-common; then
+                        sudo apt-get install -y software-properties-common
+                    fi
+
+                    # Check if curl is installed, if not, install it
+                    if ! dpkg -l | grep -q curl; then
+                        sudo apt-get install -y curl
+                    fi
+
+                    # Check if sshpass is installed, if not, install it
+                    if ! dpkg -l | grep -q sshpass; then
+                        sudo apt-get install -y sshpass
+                    fi
+
+                    # Add Docker GPG key and repository if Docker is not installed
+                    if ! dpkg -l | grep -q docker-ce; then
+                        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+                        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                        sudo apt-get install -y docker-ce
+                        sudo systemctl start docker
+                    fi
+
+                    # Check if nodejs is installed, if not, install it
+                    if ! dpkg -l | grep -q nodejs; then
+                        sudo apt-get install -y nodejs
+                    fi
+
+                    # Check if npm is installed, if not, install it
+                    if ! dpkg -l | grep -q npm; then
+                        sudo apt-get install -y npm
+                    fi
+
+                    # Check if ansible is installed, if not, install it
+                    if ! dpkg -l | grep -q ansible; then
+                        sudo apt-get install -y ansible
+                    fi
                 '''
             }
         }
@@ -48,16 +87,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Build Node.js App') {
-            steps {
-                script {
-                    sh 'npm install'
-                    sh 'npm start'
-                }
-            }
-        }
-        //TODO:Add credentials in Jenkins
         stage('Build and Deploy') {
             steps {
                 script {
