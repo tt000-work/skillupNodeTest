@@ -86,6 +86,9 @@ pipeline {
 
                             // Start SSH on Container
                             sh "docker exec -u 0 ${containerName} service ssh start"
+
+                            // Check status of SSH on Container
+                            sh "docker exec -u 0 ${containerName} service ssh status"
                             
                             // Remove any existing inventory file for this environment
                             sh "rm -f ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
@@ -95,6 +98,9 @@ pipeline {
                             [${environ}]
                             ${containerIp} ansible_connection=docker
                             """
+                            // Read and display the contents of the inventory file
+                            def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
+                            echo "Inventory File Contents:\n${inventoryContent}"
                         }
                     }
                 }
@@ -114,8 +120,11 @@ pipeline {
                                 // Display the inventory file
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
+                                // Check and Ping Ssh connection 
+                                sh "sudo ansible all -m ping -vvv"
+                                
                                 // Install Docker on the remote servers using Ansible
-                                sh "ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
+                                sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
 
                                 // Build Docker image for the current environment
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", '-f Dockerfile .')
