@@ -121,7 +121,7 @@ pipeline {
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
                                 // Check and Ping Ssh connection
-                                sh 'sudo ansible all -m ping -vvv'
+                                // sh 'sudo ansible all -m ping -vvv'
 
                                 // Install Docker on the remote servers using Ansible
                                 sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
