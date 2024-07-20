@@ -70,6 +70,14 @@ pipeline {
                             def containerName = "${environ}_container"
                             def containerImage = 'tt000/remote-server1:latest'  //TODO:Add Name of your custom image
 
+                            // Stop and remove old containers with the same name
+                            sh """
+                                if [ \$(docker ps -q -f name=${containerName}) ]; then
+                                    docker stop ${containerName}
+                                    docker rm ${containerName}
+                                fi
+                            """
+                            
                             // Run a new Docker container
                             sh "docker run -d --name ${containerName} ${containerImage} sleep infinity"
                             
