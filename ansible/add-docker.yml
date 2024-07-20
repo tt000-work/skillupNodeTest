@@ -1,6 +1,7 @@
 - hosts: all
   become: true
-
+  vars:
+    ansible_user: root
   tasks:
     - name: Install required packages
       apt:
