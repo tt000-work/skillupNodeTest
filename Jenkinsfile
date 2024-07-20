@@ -115,7 +115,7 @@ pipeline {
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
                                 // Install Docker on the remote servers using Ansible
-                                sh "ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml"
+                                sh "ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
 
                                 // Build Docker image for the current environment
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", '-f Dockerfile .')
@@ -134,7 +134,7 @@ pipeline {
 
                                     // Deploy the Docker image using Ansible
                                     ansiblePlaybook(
-                                        playbook: 'ansible/run-dockerImage.yml',
+                                        playbook: 'ansible/run-dockerImage.yml -vvv',
                                         inventory: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}",
                                         extraVars: [
                                             docker_image: imageTag
