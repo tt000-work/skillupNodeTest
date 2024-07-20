@@ -127,8 +127,8 @@ pipeline {
                                 // sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
 
                                 //Deploy Apss in All Environments
-                                sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/${environ}-docker.yml -vvv"
-                                
+                                sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/${environ}-playbook.yml -vvv"
+
                                 // Build Docker image for the current environment
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", '-f Dockerfile .')
 
