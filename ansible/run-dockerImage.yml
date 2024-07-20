@@ -1,9 +1,10 @@
 # ansible/run_docker_container.yml
 - hosts: all
-  become: true
-
+  become: true      
+  
   vars:
     docker_image: test
+    ansible_user: root
 
   tasks:
     - name: Run Docker container

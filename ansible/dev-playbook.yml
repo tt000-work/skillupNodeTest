@@ -1,6 +1,8 @@
 # dev-playbook.yml
 - hosts: all  
-  become: yes  
+  become: yes
+  vars:
+    ansible_user: root  
   tasks:  
     - name: Install npm  
       apt:  
