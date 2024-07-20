@@ -96,7 +96,7 @@ pipeline {
                             // Write the inventory file
                             writeFile file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}", text: """
                             [${environ}]
-                            ${containerIp} ansible_connection=docker
+                            root@${containerIp} ansible_connection=docker
                             """
                             // Read and display the contents of the inventory file
                             def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
@@ -146,7 +146,8 @@ pipeline {
                                         playbook: 'ansible/run-dockerImage.yml -vvv',
                                         inventory: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}",
                                         extraVars: [
-                                            docker_image: imageTag
+                                            docker_image: imageTag,
+                                            ansible_user: 'root',
                                         ],
                                         credentialsId: 'ssh'
                                     )
