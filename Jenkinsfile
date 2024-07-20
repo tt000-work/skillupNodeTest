@@ -124,7 +124,7 @@ pipeline {
                                 // sh 'sudo ansible all -m ping -vvv'
 
                                 // Install Docker on the remote servers using Ansible
-                                sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
+                                // sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
 
                                 //Deploy Apss in All Environments
                                 sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/${environ}-docker.yml -vvv"
