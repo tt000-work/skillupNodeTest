@@ -68,7 +68,7 @@ pipeline {
                     for (environ in environments) {
                         stage("Provisioning ${environ} environment") {
                             def containerName = "${environ}_container"
-                            def containerImage = 'tt000/remote-server1:latest'  //TODO:Add Name of your custom image
+                            def containerImage = 'tt000/remote-server1:latest'
 
                             // Stop and remove old containers with the same name
                             sh """
@@ -77,10 +77,10 @@ pipeline {
                                     docker rm ${containerName}
                                 fi
                             """
-                            
+
                             // Run a new Docker container
                             sh "docker run -d --name ${containerName} ${containerImage} sleep infinity"
-                            
+
                             // Retrieve the container IP address
                             def containerIp = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}", returnStdout: true).trim()
 
@@ -88,8 +88,8 @@ pipeline {
                             sh "docker exec -u 0 ${containerName} service ssh start"
 
                             // Check status of SSH on Container
-                            sh "docker exec -u 0 ${containerName} service ssh status"
-                            
+                            // sh "docker exec -u 0 ${containerName} service ssh status"
+
                             // Remove any existing inventory file for this environment
                             sh "rm -f ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
@@ -98,9 +98,9 @@ pipeline {
                             [${environ}]
                             ${containerIp} ansible_connection=docker
                             """
-                            // Read and display the contents of the inventory file
-                            def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
-                            echo "Inventory File Contents:\n${inventoryContent}"
+                            // // Read and display the contents of the inventory file
+                            // def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
+                            // echo "Inventory File Contents:\n${inventoryContent}"
                         }
                     }
                 }
@@ -120,9 +120,9 @@ pipeline {
                                 // Display the inventory file
                                 sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
-                                // Check and Ping Ssh connection 
-                                sh "sudo ansible all -m ping -vvv"
-                                
+                                // Check and Ping Ssh connection
+                                sh 'sudo ansible all -m ping -vvv'
+
                                 // Install Docker on the remote servers using Ansible
                                 sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml -vvv"
 
