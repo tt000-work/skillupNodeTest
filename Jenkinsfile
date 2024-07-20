@@ -72,10 +72,13 @@ pipeline {
 
                             // Run a new Docker container
                             sh "docker run -d --name ${containerName} ${containerImage} sleep infinity"
-
+                            
                             // Retrieve the container IP address
                             def containerIp = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}", returnStdout: true).trim()
 
+                            // Start SSH on Container
+                            sh "docker exec -u 0 ${containerName} service ssh start"
+                            
                             // Remove any existing inventory file for this environment
                             sh "rm -f ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
