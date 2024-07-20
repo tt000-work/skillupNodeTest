@@ -88,7 +88,7 @@ pipeline {
                             sh "docker exec -u 0 ${containerName} service ssh start"
 
                             // Check status of SSH on Container
-                            // sh "docker exec -u 0 ${containerName} service ssh status"
+                            sh "docker exec -u 0 ${containerName} service ssh status"
 
                             // Remove any existing inventory file for this environment
                             sh "rm -f ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
@@ -98,9 +98,9 @@ pipeline {
                             [${environ}]
                             ${containerIp} ansible_connection=docker
                             """
-                            // // Read and display the contents of the inventory file
-                            // def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
-                            // echo "Inventory File Contents:\n${inventoryContent}"
+                            // Read and display the contents of the inventory file
+                            def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
+                            echo "Inventory File Contents:\n${inventoryContent}"
                         }
                     }
                 }
