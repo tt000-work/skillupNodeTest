@@ -96,7 +96,7 @@ pipeline {
                             // Write the inventory file
                             writeFile file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}", text: """
                             [${environ}]
-                            root@${containerIp} ansible_connection=docker
+                            ${containerIp} ansible_connection=docker
                             """
                             // Read and display the contents of the inventory file
                             def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
