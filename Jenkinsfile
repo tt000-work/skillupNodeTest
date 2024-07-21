@@ -1,153 +1,130 @@
 pipeline {
+    // Any available agent can be used to execute this pipeline
     agent any
 
+    // Environment variables that are set for the pipeline
     environment {
-        LANG = 'en_US.UTF-8'
-        LC_ALL = 'en_US.UTF-8'
-        ANSIBLE_INVENTORY = 'ips-inventory.ini'
-        DOCKER_IMAGE = 'node.js-test-app'
+        LANG = 'en_US.UTF-8'                 // Language setting for the environment
+        LC_ALL = 'en_US.UTF-8'               // Locale setting
+        ANSIBLE_INVENTORY = 'ips-inventory.ini' // Default Ansible inventory file name
+        DOCKER_IMAGE = 'node.js-test-app'    // Base name for the Docker image
     }
 
     stages {
+        // Stage for setting up the system environment
         stage('Setup Environment') {
             steps {
+                // Shell commands to install necessary packages
                 sh '''
-                    # Update the package list
+                    // Update package lists
                     sudo apt-get update
 
-                    # Check if gnupg is installed, if not, install it
-                    if ! dpkg -l | grep -q gnupg; then
-                        sudo apt-get install -y gnupg
-                    fi
+                    // Install necessary packages if they are not already installed
+                    for pkg in gnupg software-properties-common curl sshpass docker-ce nodejs npm ansible; do
+                        if ! dpkg -l | grep -q $pkg; then
+                            sudo apt-get install -y $pkg
+                        fi
+                    done
 
-                    # Check if software-properties-common is installed, if not, install it
-                    if ! dpkg -l | grep -q software-properties-common; then
-                        sudo apt-get install -y software-properties-common
-                    fi
-
-                    # Check if curl is installed, if not, install it
-                    if ! dpkg -l | grep -q curl; then
-                        sudo apt-get install -y curl
-                    fi
-
-                    # Check if sshpass is installed, if not, install it
-                    if ! dpkg -l | grep -q sshpass; then
-                        sudo apt-get install -y sshpass
-                    fi
-
-                    # Add Docker GPG key and repository if Docker is not installed
+                    // Check if Docker is installed, if not, install it
                     if ! dpkg -l | grep -q docker-ce; then
+                        // Add Docker's GPG key
                         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+                        // Add Docker's APT repository
                         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                        // Install Docker
                         sudo apt-get install -y docker-ce
+                        // Start Docker service
                         sudo systemctl start docker
-                    fi
-
-                    # Check if nodejs is installed, if not, install it
-                    if ! dpkg -l | grep -q nodejs; then
-                        sudo apt-get install -y nodejs
-                    fi
-
-                    # Check if npm is installed, if not, install it
-                    if ! dpkg -l | grep -q npm; then
-                        sudo apt-get install -y npm
-                    fi
-
-                    # Check if ansible is installed, if not, install it
-                    if ! dpkg -l | grep -q ansible; then
-                        sudo apt-get install -y ansible
                     fi
                 '''
             }
         }
 
-        stage('Provisioning environments') {
+        // Stage for provisioning Docker containers for different environments
+        stage('Provisioning Environments') {
             steps {
                 script {
+                    // List of environments to provision
                     def environments = ['dev', 'int', 'prod']
-                    for (environ in environments) {
-                        stage("Provisioning ${environ} environment") {
-                            def containerName = "${environ}_container"
-                            def containerImage = 'tt000/remote-server1:latest'
+                    // Image reference for the container to be run
+                    def containerImage = 'tt000/remote-server1:latest'
 
-                            // Stop and remove old containers with the same name
+                    // Loop through each environment to provision it
+                    environments.each { environ ->
+                        stage("Provisioning ${environ} environment") {
+                            // Name for the Docker container based on the environment
+                            def containerName = "${environ}_container"
+
+                            // Shell commands to manage Docker containers
                             sh """
+                                // Stop and remove the container if it exists
                                 if [ \$(docker ps -q -f name=${containerName}) ]; then
                                     docker stop ${containerName}
                                     docker rm ${containerName}
                                 fi
+                                // Run a new Docker container in detached mode
+                                docker run -d --name ${containerName} ${containerImage} sleep infinity
+                                // Start the SSH service inside the container
+                                docker exec -u 0 ${containerName} service ssh start
                             """
 
-                            // Run a new Docker container
-                            sh "docker run -d --name ${containerName} ${containerImage} sleep infinity"
-
-                            // Retrieve the container IP address
+                            // Retrieve the IP address of the running container
                             def containerIp = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}", returnStdout: true).trim()
+                            // Define the inventory file path for Ansible
+                            def inventoryFile = "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
 
-                            // Start SSH on Container
-                            sh "docker exec -u 0 ${containerName} service ssh start"
-
-                            // Check status of SSH on Container
-                            sh "docker exec -u 0 ${containerName} service ssh status"
-
-                            // Remove any existing inventory file for this environment
-                            sh "rm -f ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
-
-                            // Write the inventory file
-                            writeFile file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}", text: """
+                            // Write container's IP to the Ansible inventory file
+                            writeFile file: inventoryFile, text: """
                             [${environ}]
                             ${containerIp} ansible_connection=docker
                             """
-                            // Read and display the contents of the inventory file
-                            def inventoryContent = readFile(file: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}")
-                            echo "Inventory File Contents:\n${inventoryContent}"
+                            // Echo the contents of the inventory file for verification
+                            echo "Inventory File Contents for ${environ}:\n${readFile(file: inventoryFile)}"
                         }
                     }
                 }
             }
         }
+
+        // Stage for building and deploying the application to the provisioned environments
         stage('Build and Deploy') {
             steps {
                 script {
-                    // Define the environments
+                    // List of environments for deployment
                     def environments = ['dev', 'int', 'prod']
 
-                    // Loop through each environment
+                    // Loop through each environment to build and deploy
                     environments.each { environ ->
                         stage("Build and Deploy to ${environ} environment") {
-                            // Use SSH credentials
+                            // Define the inventory file for the current environment
+                            def inventoryFile = "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
+
+                            // Use stored credentials for SSH access
                             withCredentials([usernamePassword(credentialsId: 'ssh', passwordVariable: 'sshPass', usernameVariable: 'sshUser')]) {
-                                // Display the inventory file
-                                sh "cat ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}"
+                                echo "Using inventory file: ${inventoryFile}"
 
-                                // Check and Ping Ssh connection
-                                // sh 'sudo ansible all -m ping -vvv'
+                                // Run Ansible playbooks for Docker and application setup
+                                sh "sudo ansible-playbook -vvvv -i ${inventoryFile} ansible/add-docker.yml"
+                                sh "sudo ansible-playbook -i ${inventoryFile} ansible/${environ}-playbook.yml -vvvv"
 
-                                // Install Docker on the remote servers using Ansible
-                                 sh "sudo ansible-playbook -vvvv -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/add-docker.yml"
-
-                                //Deploy Apss in All Environments
-                                sh "sudo ansible-playbook -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} ansible/${environ}-playbook.yml -vvvv"
-
-                                // Build Docker image for the current environment
+                                // Build Docker image for the application
                                 def dockerImage = docker.build("${DOCKER_IMAGE}:${environ}", '-f Dockerfile .')
 
-                                // Push Docker image to Docker registry
+                                // Use stored credentials for Docker login
                                 withCredentials([usernamePassword(credentialsId: 'dockerCreds', passwordVariable: 'dockerPass', usernameVariable: 'dockerUser')]) {
-                                    // Login to Docker registry
                                     sh "docker login -u ${dockerUser} -p ${dockerPass}"
 
-                                    // Tag the Docker image
+                                    // Tag the Docker image for pushing to the registry
                                     def imageTag = "${dockerUser}/${DOCKER_IMAGE}:${environ}"
                                     sh "docker tag ${dockerImage.imageName()} ${imageTag}"
-
-                                    // Push the Docker image to the registry
+                                    // Push the tagged image to the Docker registry
                                     sh "docker push ${imageTag}"
 
-                                    // Deploy the Docker image using Ansible
+                                    // Run Ansible playbook to deploy the Docker image
                                     ansiblePlaybook(
                                         playbook: 'ansible/run-dockerImage.yml -vvv',
-                                        inventory: "${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY}",
+                                        inventory: inventoryFile,
                                         extraVars: [
                                             docker_image: imageTag,
                                             ansible_user: 'root',
@@ -155,8 +132,9 @@ pipeline {
                                         credentialsId: 'ssh'
                                     )
 
-                                    // Verify deployment
-                                    def deployStatus = sh(script: "ansible -i ${env.WORKSPACE}/${environ}_${ANSIBLE_INVENTORY} -m shell -a 'docker ps | grep ${DOCKER_IMAGE}:${environ}'", returnStatus: true)
+                                    // Check deployment status using Ansible
+                                    def deployStatus = sh(script: "ansible -i ${inventoryFile} -m shell -a 'docker ps | grep ${DOCKER_IMAGE}:${environ}'", returnStatus: true)
+                                    // If deployment failed, raise an error
                                     if (deployStatus != 0) {
                                         error "Deployment to ${environ} environment failed"
                                     }
